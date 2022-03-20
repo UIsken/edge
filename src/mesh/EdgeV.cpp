@@ -27,7 +27,6 @@
 #include "EdgeV.h"
 #include "../data/EntityLayout.h"
 
-#include <cmath>
 
 void edge::mesh::EdgeV::setElLayout( unsigned short         i_nTgs,
                                      std::size_t    const * i_nTgElsIn,
@@ -183,8 +182,6 @@ edge::mesh::EdgeV::EdgeV( std::string const & i_pathToMesh,
                           std::string const & i_pathToSupplement,
                           int                 i_periodic ) {
   m_gmsh = new edge_v::io::Gmsh();
-  m_gmsh->setNumber( "Mesh.IgnoreParametrization",
-                     1 );
   m_gmsh->open( i_pathToMesh );
   m_gmsh->readMesh();
   m_mesh = new edge_v::mesh::Mesh( *m_gmsh,

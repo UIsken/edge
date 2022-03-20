@@ -1,10 +1,9 @@
 ##
 # @file This file is part of EDGE.
 #
-# @author Alexander Breuer (alex.breuer AT uni-jena.de)
+# @author Alexander Breuer (anbreuer AT ucsd.edu)
 #
 # @section LICENSE
-# Copyright (c) 2021, Friedrich Schiller University Jena
 # Copyright (c) 2019-2020, Alexander Breuer
 # Copyright (c) 2015-2018, Regents of the University of California
 # All rights reserved.
@@ -106,8 +105,7 @@ if env['tests']:
     l_tests = l_tests + [ 'sc/Kernels.test.cpp' ]
 
   if env['xsmm'] and env['cfr'] != "1":
-    if env['arch'] not in ['aarch64', 'n1', 'a64fx']: # TODO: this can be removed once LIBXSMM supports fused sims not matching vector length
-      l_tests = l_tests + [ 'data/MmXsmmFused.test.cpp' ]
+    l_tests = l_tests + [ 'data/MmXsmmFused.test.cpp' ]
 
   if env['element_type'] == 'tet4' and env['order'] == '3':
     l_tests = l_tests + ['impl/advection/kernels/TimePred.test.cpp']
@@ -118,7 +116,8 @@ if env['tests']:
                        'impl/seismic/setups/Elasticity.test.cpp',
                        'impl/seismic/setups/ViscoElasticity.test.cpp',
                        'impl/seismic/solvers/AderDgInit.test.cpp',
-                       'impl/seismic/solvers/FrictionLaws.test.cpp' ]
+                       'impl/seismic/solvers/FrictionLaws.test.cpp',
+                       'impl/seismic/kernels/Microbench.test.cpp' ]
 
     # seismic kernel tests are only defined for tets and FP32
     if env['element_type'] == 'tet4' and env['precision'] == '32':
@@ -132,8 +131,13 @@ if env['tests']:
         if env['order'] == '4':
           l_tests += ['impl/seismic/kernels/TimePredSingle.test.cpp']
           l_tests += ['impl/seismic/kernels/VolIntSingle.test.cpp']
+        if env['bfloat16']:
+          l_tests += ['impl/seismic/kernels/VolIntSingleBF16.test.cpp']
         if env['order'] == '3':
           l_tests += ['impl/seismic/kernels/SurfIntSingle.test.cpp']
+          if env['bfloat16']:
+            l_tests += ['impl/seismic/kernels/SurfIntSingleBF16.test.cpp']
+        
 
         if env['cfr'] == '16':
           if env['order'] == '4':

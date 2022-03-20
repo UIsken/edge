@@ -79,6 +79,17 @@ constexpr T CE_MAX( T i_first, T i_second ) {
 }
 
 /**
+ * Gets the next bigger even number of modes for given order.
+ * 
+ * @param i_const entity type.
+ * @return next even bigger neighbour or number itself if it's even
+ **/
+
+template< typename T >
+constexpr T EVEN_PAD( T i_const ) {
+  return (i_const % 2) ? i_const + 1 : i_const;
+}
+/**
  * Determines the maximum multiple of two, which divides the number.
  *
  * @param i_number number which multiples are determined.

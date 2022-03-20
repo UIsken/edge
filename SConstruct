@@ -1,11 +1,11 @@
 ##
 # @file This file is part of EDGE.
 #
-# @author Alexander Breuer (alex.breuer AT uni-jena.de)
+# @author Alexander Breuer (anbreuer AT ucsd.edu)
 #         Alexander Heinecke (alexander.heinecke AT intel.com)
 #
 # @section LICENSE
-# Copyright (c) 2020-2021, Friedrich Schiller University Jena
+# Copyright (c) 2020, Friedrich Schiller University Jena
 # Copyright (c) 2019-2020, Alexander Breuer
 # Copyright (c) 2015-2019, Regents of the University of California
 # Copyright (c) 2016, Intel Corporation
@@ -77,17 +77,13 @@ def getArch():
 
     if( 'avx512' in l_cpuInfo['flags'] ):
       l_arch = 'avx512'
-    elif( 'avx512f' in l_cpuInfo['flags'] ):
-      l_arch = 'avx512'
     elif( 'avx2' in l_cpuInfo['flags'] ):
       l_arch = 'hsw'
     elif( 'avx' in l_cpuInfo['flags'] ):
       l_arch = 'snb'
     elif( 'sse4_2' in l_cpuInfo['flags'] ):
       l_arch = 'wsm'
-    elif( 'sve' in l_cpuInfo['flags'] ):
-      l_arch = 'a64fx'
-    elif( 'brand_raw' in l_cpuInfo.keys() and l_cpuInfo['brand_raw'] == 'Neoverse-N1' ):
+    elif( l_cpuInfo['brand_raw'] == 'Neoverse-N1' ):
       l_arch = 'n1'
     elif( l_cpuInfo['arch_string_raw'] == 'aarch64' ):
       l_arch = 'aarch64'
@@ -211,7 +207,7 @@ vars.AddVariables(
   EnumVariable( 'arch',
                 'architecture to compile for',
                 'native',
-                 allowed_values=('native', 'wsm', 'snb', 'hsw', 'knl', 'skx', 'avx512', 'n1', 'a64fx')
+                 allowed_values=('native', 'wsm', 'snb', 'hsw', 'knl', 'skx', 'avx512' )
               ),
   EnumVariable( 'precision',
                 'floating point precision (bit)',
@@ -261,8 +257,16 @@ vars.AddVariables(
                 'enable instrumentation',
                 False ),
   BoolVariable( 'mmperf',
-                'enable matmul kernel performance telemetry',
-                False )
+                'Enable matmul kernel performance telemetry',
+                False ),
+  BoolVariable( 'bfloat16',
+                'Enable bfloat16 floating point approximation, only available for 32-precision',
+                False ),
+  EnumVariable( 'approx_level',
+                'level of bf16 approximation when used, only available for 32-precision and active bf16 support',
+                '2',
+                 allowed_values=('0', '1', '2', '3', '4')
+              ),
 )
 
 # command args have priority
@@ -360,16 +364,6 @@ if 'LIBRARY_PATH' in env['ENV'].keys():
       env.AppendUnique( LIBPATH = [l_libP] )
       env.AppendUnique( RPATH   = [l_libP] )
 
-if 'CMAKE_PREFIX_PATH' in env['ENV'].keys():
-  l_paths = env['ENV']['CMAKE_PREFIX_PATH'].split(':')
-  for l_pa in l_paths:
-    l_pa = adjustPath( l_pa )
-    env.AppendUnique( CPPPATH = [l_pa + '/include'] )
-    env.AppendUnique( LIBPATH = [l_pa + '/lib'] )
-    env.AppendUnique( LIBPATH = [l_pa + '/lib64'] )
-    env.AppendUnique( RPATH = [l_pa + '/lib'] )
-    env.AppendUnique( RPATH = [l_pa + '/lib64'] )
-
 # forward EDGE version
 env.Append( CPPDEFINES='PP_EDGE_VERSION=\\"'+getEdgeVersion()+'\\"' )
 
@@ -396,6 +390,7 @@ if( env['arch'] == 'native' ):
   print( 'trying to discover architecture' )
   env['arch'] = getArch()
   print( '  now using the following architecture: ' + env['arch'] )
+  env.Append( CPPFLAGS = ['-march=native'] )
 
 # disable libxsmm if not build elastic
 if( env['xsmm'] ):
@@ -405,7 +400,7 @@ if( env['xsmm'] ):
   if( env['order'] == '1' ):
     warnings.warn('  Warning: LIBXSMM is not supported finite volume settings, continuing without' )
     env['xsmm'] = False
-  if( not (env['arch'] == 'wsm' and env['cfr'] == '1') and env['arch'] != 'snb' and env['arch'] != 'hsw' and env['arch'] != 'knl' and env['arch'] != 'skx' and env['arch'] != 'avx512' and env['arch'] != 'n1' and env['arch'] != 'aarch64' and env['arch'] != 'a64fx' ):
+  if( not (env['arch'] == 'wsm' and env['cfr'] == '1') and env['arch'] != 'snb' and env['arch'] != 'hsw' and env['arch'] != 'knl' and env['arch'] != 'skx' and env['arch'] != 'avx512' and env['arch'] != 'n1' and env['arch'] != 'aarch64' ):
     warnings.warn( '  Warning: LIBXSMM not supported for arch != (wsm (cfr=1), snb, hsw, knl, skx, avx512, n1 or aarch64), continuing without' )
     env['xsmm'] = False
 
@@ -434,17 +429,17 @@ elif env['arch'] == 'hsw':
   env.Append( CPPFLAGS = ['-march=core-avx2'] )
 elif env['arch'] == 'avx512':
   if compilers=='gnu' or compilers=='clang':
-    env.Append( CPPFLAGS = ['-mfma', '-mavx512f', '-mavx512cd'] )
+    env.Append( CPPFLAGS = ['-mavx512f', '-mavx512cd'] )
   elif compilers=='intel':
     env.Append( CPPFLAGS = ['-xCOMMON-AVX512'] )
 elif env['arch'] == 'skx':
   if compilers=='gnu' or compilers=='clang':
-    env.Append( CPPFLAGS = ['-mfma', '-mavx512f', '-mavx512cd', '-mavx512bw', '-mavx512dq', '-mavx512vl', '-mprefer-vector-width=512'] )
+    env.Append( CPPFLAGS = ['-mavx512f', '-mavx512cd', '-mavx512bw', '-mavx512dq', '-mavx512vl'] )
   elif compilers=='intel':
-    env.Append( CPPFLAGS = ['-xCOMMON-AVX512', '-qopt-zmm-usage=high'] )
+    env.Append( CPPFLAGS = ['-xCORE-AVX512'] )
 elif env['arch'] == 'knl' or env['arch'] == 'knm':
   if compilers=='gnu' or compilers=='clang':
-    env.Append( CPPFLAGS = ['-mfma', '-mavx512f', '-mavx512cd', '-mavx512er', '-mavx512pf'] )
+    env.Append( CPPFLAGS = ['-mavx512f', '-mavx512cd', '-mavx512er', '-mavx512pf'] )
   elif compilers=='intel':
     env.Append( CPPFLAGS = ['-xMIC-AVX512'] )
   # add memkind if available (static is preferred)
@@ -455,10 +450,6 @@ elif env['arch'] == 'knl' or env['arch'] == 'knm':
 elif env['arch'] == 'n1':
   if compilers=='gnu' or compilers=='clang':
     env.Append( CPPFLAGS = ['-mtune=neoverse-n1'] )
-    env.Append( CPPDEFINES = ['LIBXSMM_PLATFORM_FORCE'] )
-elif env['arch'] == 'a64fx':
-  if compilers=='gnu' or compilers=='clang':
-    env.Append( CPPFLAGS = ['-march=armv8-a+sve', '-msve-vector-bits=512'] )
     env.Append( CPPDEFINES = ['LIBXSMM_PLATFORM_FORCE'] )
 elif env['arch'] == 'aarch64':
   if compilers=='gnu' or compilers=='clang':
@@ -504,12 +495,10 @@ if 'omp' in env['parallel']:
 
   if compilers == 'intel':
     env.Append( CPPFLAGS = ['-qopenmp'] )
-    env.Append( CPPFLAGS = ['-qopenmp-simd'] )
     env.Append( LINKFLAGS = ['-qopenmp'] )
     env.Append( LINKFLAGS = ['-qopenmp-link=static'] )
   elif compilers == 'gnu' or compilers == 'clang':
     env.Append( CPPFLAGS = ['-fopenmp'] )
-    env.Append( CPPFLAGS = ['-fopenmp-simd'] )
     env.Append( LINKFLAGS = ['-fopenmp'] )
 
 # fix braces issues in clang with versions below 6 (https://bugs.llvm.org/show_bug.cgi?id=21629)
@@ -524,10 +513,6 @@ if compilers == 'clang':
     env.Append( LINKFLAGS = [ '-Wl,-rpath='+rpath ] )
   except:
     print( '  failed getting dir of libstdc++.so, not setting rpath' )
-
-# fix clang's confusion about future flags when using older versions
-if compilers=='clang':
-  env.Append( CXXFLAGS = ["-Wno-unknown-warning-option"] )
 
 # enable mpi
 if 'mpi' in env['parallel']:
@@ -576,6 +561,13 @@ if env['tests']:
 if env['mmperf']:
   env.Append( CPPDEFINES = ['PP_MMKERNEL_PERF'] )
 
+# enable bfloat approximation and forward it's order
+if env['bfloat16']:
+  env.Append( CPPDEFINES = ['PP_FP32_BF16_APPROX'] )
+  env.Append( CPPDEFINES=['PP_APPROX_LEVEL='+env['approx_level']] )
+# forward order of bf16 approx
+
+
 # get source files
 VariantDir( env['build_dir']+'/src', 'src')
 VariantDir( env['build_dir']+'/submodules', 'submodules')
@@ -597,7 +589,7 @@ Import('env')
 # WARNING: leave scorep at the very bottom (outherwise it will be used in CheckLib-tests
 if env['inst']:
   # disable most of scorep
-  scorep = "scorep --thread=omp --nocompiler --nomemory --user "
+  scorep = "scorep --thread=omp --nocompiler --user "
 
   env['CC']  = scorep+env['CC']
   env['CXX'] = scorep+env['CXX']

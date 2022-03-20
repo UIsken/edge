@@ -21,11 +21,9 @@
  * @section DESCRIPTION
  * Steps for the advection equation.
  **/
+ 
 if( i_step == 0 ) {
-  real_base (** l_sendPtrs)[N_ELEMENT_MODES][N_CRUNS] = nullptr;
-  if( m_nCommBuffers > 0 ) {
-    (real_base (**) [N_ELEMENT_MODES][N_CRUNS]) m_sendPtrs[getUpdatesSync()%m_nCommBuffers];
-  }
+  real_base (** l_sendPtrs)[N_ELEMENT_MODES][N_CRUNS] = (real_base (**) [N_ELEMENT_MODES][N_CRUNS]) m_sendPtrs[getUpdatesSync()%1];
   m_internal.m_globalShared4[0]->local(  i_first,
                                          i_size,
                                          getUpdatesSync()%2 == 0,
@@ -38,10 +36,7 @@ if( i_step == 0 ) {
                                          l_sendPtrs );
 }
 else if( i_step == 1 ) {
-  real_base (** l_recvPtrs)[N_ELEMENT_MODES][N_CRUNS] = nullptr;
-  if( m_nCommBuffers > 0 ) {
-    (real_base (**) [N_ELEMENT_MODES][N_CRUNS]) m_recvPtrs[(getUpdatesSync()/m_nCommBuffers)%m_nCommBuffers];
-  }
+  real_base (** l_recvPtrs)[N_ELEMENT_MODES][N_CRUNS] = (real_base (**) [N_ELEMENT_MODES][N_CRUNS]) m_recvPtrs[(getUpdatesSync()/1)%1];
   m_internal.m_globalShared4[0]->neigh( i_first,
                                         i_size,
                                         getUpdatesSync()%2 == 0,

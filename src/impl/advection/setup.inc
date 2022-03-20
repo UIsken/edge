@@ -4,7 +4,6 @@
  * @author Alexander Breuer (anbreuer AT ucsd.edu)
  *
  * @section LICENSE
- * Copyright (c) 2021, Friedrich Schiller University Jena
  * Copyright (c) 2019-2020, Alexander Breuer
  * Copyright (c) 2016-2018, Regents of the University of California
  * All rights reserved.
@@ -43,6 +42,7 @@
   l_internal.m_globalShared3[2] = l_raw + 2*l_edgeV.nEls();
 }
 
+#ifdef PP_USE_MPI
   l_distributed.init( l_edgeV.nTgs(),
                       C_ENT[T_SDISC.ELEMENT].N_FACES,
                       l_edgeV.nEls(),
@@ -53,6 +53,7 @@
                       l_edgeV.getRecvFa(),
                       l_edgeV.getRecvEl(),
                       l_dynMem );
+#endif
 
 // setup shared memory parallelization
 std::size_t l_firstDe = 0;

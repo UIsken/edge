@@ -32,9 +32,15 @@
 #include "VolIntVanilla.hpp"
 #include "SurfIntVanilla.hpp"
 #elif defined(PP_T_KERNELS_XSMM_DENSE_SINGLE)
+  #if defined(PP_FP32_BF16_APPROX)
+  #include "VolIntSingleBF16.hpp"
+  #include "SurfIntSingleBF16.hpp"
+  #else
+  #include "VolIntSingle.hpp"
+  #include "SurfIntSingle.hpp"
+  #endif
+//#include "SurfIntSingle.hpp"
 #include "TimePredSingle.hpp"
-#include "VolIntSingle.hpp"
-#include "SurfIntSingle.hpp"
 #elif defined(PP_T_KERNELS_XSMM)
 #include "TimePredFused.hpp"
 #include "VolIntFused.hpp"
@@ -42,7 +48,6 @@
 #else
 #error kernels not supported
 #endif
-
 
 namespace edge {
   namespace seismic {
@@ -100,14 +105,35 @@ class edge::seismic::kernels::Kernels {
                     TL_T_EL,
                     TL_O_SP,
                     TL_O_TI > m_time;
-    VolIntSingle< TL_T_REAL,
-                  TL_N_RMS,
-                  TL_T_EL,
-                  TL_O_SP> m_volInt;
+    #if defined(PP_FP32_BF16_APPROX)
+      VolIntSingleBF16< TL_T_REAL,
+                        TL_N_RMS,
+                        TL_T_EL,
+                        TL_O_SP> m_volInt;
+                        
+      SurfIntSingleBF16< TL_T_REAL,
+                   TL_N_RMS,
+                   TL_T_EL,
+                   TL_O_SP > m_surfInt;
+                   
+    #else
+      VolIntSingle< TL_T_REAL,
+                    TL_N_RMS,
+                    TL_T_EL,
+                    TL_O_SP> m_volInt;
+                    
+      SurfIntSingle< TL_T_REAL,
+                   TL_N_RMS,
+                   TL_T_EL,
+                   TL_O_SP > m_surfInt;
+                   
+    #endif
+    /*
     SurfIntSingle< TL_T_REAL,
                    TL_N_RMS,
                    TL_T_EL,
                    TL_O_SP > m_surfInt;
+                   */
 #elif defined(PP_T_KERNELS_XSMM)
 static_assert( TL_N_CRS != 1, "trying to build fused kernels in single setting" );
     TimePredFused< TL_T_REAL,

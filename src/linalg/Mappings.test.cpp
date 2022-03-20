@@ -1,10 +1,9 @@
 /**
  * @file This file is part of EDGE.
  *
- * @author Alexander Breuer (alex.breuer AT uni-jena.de)
+ * @author Alexander Breuer (anbreuer AT ucsd.edu)
  *
  * @section LICENSE
- * Copyright (c) 2021, Friedrich Schiller University Jena
  * Copyright (c) 2016-2017, Regents of the University of California
  * All rights reserved.
  *
@@ -63,8 +62,8 @@ TEST_CASE( "Mappings: Face to volume coordinates (reference element)", "[mapping
   // init vars
   unsigned short l_fa;
   t_entityType l_elType;
-  double l_faPt[2] = {0};
-  double l_volPt[3] = {0};
+  double l_faPt[2];
+  double l_volPt[3];
 
   // line elements
   l_fa = 0;
